@@ -13,7 +13,7 @@ Connct switch to network. Connect instruments. MAke sure DHCP is enabled on inst
 Only if your computer is unhappy with the set ip.
 """
 
-host='192.168.1.66'  #Check on DMM what the ip address actually is.
+host='169.254.112.87'  #Check on DMM what the ip address actually is.
 
 telnet=telnetlib.Telnet()
 telnet.close()  #closes previos session if there was one
@@ -23,10 +23,10 @@ telnet.write(('SYST:REM'+'\n').encode('ascii'))
 n=0
 time.sleep(1)
 while n<=100:
-    telnet.write(('MEAS:RES?'+'\n').encode('ascii'))
+    telnet.write(('MEAS:VOLT:DC?\n').encode('ascii'))
     #telnet.write('READ\n')
     print(n,telnet.read_eager())
-    time.sleep(0.5)
+    time.sleep(1)
     n=n+1
 
 
