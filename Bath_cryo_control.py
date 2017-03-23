@@ -26,7 +26,8 @@ send serial data setup.
 Current source setup:
 Keithley 6220 via RS232.
 Baudrate 19.2k LF (line feed terminator) No flow control. 8 bits, 1 stop, no parity.
-Page 3-15 in manual has programming commands
+Page 3-15 in manual has programming commands.
+Red (high), black (low), green (earth)
 
 """
 
@@ -38,17 +39,17 @@ import sys
 import matplotlib as plt
 import numpy as np
 
-sample_name='Test18Jan'
+sample_name='Test24March'
 comment='trial'
 date=time.strftime("%Y%m%d")
 filename=sample_name+'_'+comment+'_'+date+'.txt'
 
 #file_location='/home/feliciaullstad/Desktop/Google_Drive/PhD/SmN data/Bath cryostat/'+sample_name
-file_location='/Users/Felicia/Desktop/Google_Drive/PhD/SmN data/Bath cryostat/'+sample_name
+file_location='/Users/Felicia/Desktop/GoogleDrive/PhD/SmN data/Bath cryostat/'+sample_name
 
 
 #Also have option to select a sequence
-current=1*10**-6    # Sample current in amps
+current=1000*10**-6    # Sample current in amps
 meas_pause=5    # Seconds between each measurement
 end_time=100    # End time in seconds
 MAXvoltage=20   #Setting the compliance voltage of sample current source
@@ -58,8 +59,8 @@ MAXvoltage=20   #Setting the compliance voltage of sample current source
 
 #Always connect multimeters through the router.
 sample_voltmeter_address='192.168.1.66'  #ip address of multimeter TEK COLD
-sample_ammeter_address='192.168.1.65'    #ip address of multimeter TEK HOT
-thermo_voltmeter_address='192.168.1.64'  #ip address of multimeter FLUKE
+sample_ammeter_address='192.168.1.86'    #ip address of multimeter TEK HOT
+thermo_voltmeter_address='192.168.1.67'  #ip address of multimeter FLUKE
 sample_currentsource_address='/dev/tty.usbserial'  #serial location of current source on a mac
 hall_sensor_address='/dev/tty.wchusbserial620' #Arduino to read voltage from hall probe on a mac
 
@@ -86,7 +87,7 @@ sample_voltmeter=telnetlib.Telnet()   #Setup telnet
 thermo_voltmeter=telnetlib.Telnet()   #Setup telnet
 sample_ammeter=telnetlib.Telnet()   #Setup telnet
 
-hall_sensor=serial.Serial(port=hall_sensor_address, baudrate=115200, timeout=3)  #Sets up connection to arduino for measuring the magn field
+#hall_sensor=serial.Serial(port=hall_sensor_address, baudrate=115200, timeout=3)  #Sets up connection to arduino for measuring the magn field
 
 sample_currentsource=serial.Serial(sample_currentsource_address, 19200, bytesize=8, parity='N', stopbits=1, timeout=3)   #Setup serial
 sample_currentsource.write(('SYST:REM'+'\n').encode('ascii'))  #
@@ -120,13 +121,14 @@ def set_current(machine,current,MAXvoltage): # Sets the current source to outpur
 
 
 def reset_current(machine):
-    machine.write(('OUT OFF'+'\n').encode('ascii'))
+    machine.write(('OUTP OFF'+'\n').encode('ascii'))
 
 def auto_range(machine):
     machine.write(('MEAS:CURR:DC?'+'\n').encode('ascii')) #Asks multimeter to set to auto range
 
 def meas_current(machine):
     machine.write(('MEAS:CURR:DC?'+'\n').encode('ascii')) #Asks multimeter to measure the current
+    time.sleep(0.5)
     current=machine.read_eager()  #Read current from multimeter
     current_str=current.decode('ascii')
     try:
@@ -137,6 +139,7 @@ def meas_current(machine):
 
 def meas_voltage(machine):
     machine.write(('MEAS:VOLT:DC?'+'\n').encode('ascii')) #Asks multimeter to measure the voltage
+    time.sleep(0.5)
     voltage=machine.read_eager()  #Read voltage from multimeter
     voltage_str=voltage.decode('ascii')
     try:
@@ -147,6 +150,7 @@ def meas_voltage(machine):
 
 def meas_thermo_volt(machine): #needs \n after command
     machine.write(('MEAS:VOLT:DC?'+'\n').encode('ascii'))
+    time.sleep(0.5)
     voltage=machine.read_eager()  #Read voltage from multimeter
     voltage_str=voltage.decode('ascii')
     try:
@@ -210,6 +214,7 @@ def close_machines():    #For closing all relevant devices after finished sampli
     machinelist=[sample_voltmeter,thermo_voltmeter,sample_ammeter,sample_currentsource]
     for machine in machinelist:
         machine.close()
+    sample_currentsource.write(('OUTP OFF'+'\n').encode('ascii'))
 
 def close_file():    #For closing all relevant devices after finished sampling
     f.close()
@@ -220,7 +225,15 @@ def close_file():    #For closing all relevant devices after finished sampling
     #sample_currentsource.close()
 ###############################################################################
 """Starting the measurement section"""
-
+"""
+#Dummy setup due to inilazation time of multimeters
+reset_current(sample_currentsource) #Resets current source
+set_current(sample_currentsource,current,MAXvoltage)    #Sets the positive sample current
+time.sleep(1)
+dummy_value1=meas_current(sample_ammeter)
+time.sleep(1)
+dummy_value2=meas_voltage(sample_voltmeter)
+"""
 starttime=time.time()   #Saves the start time
 
 n=0
@@ -228,8 +241,13 @@ time.sleep(1)
 current_time=0
 while current_time<end_time:
     current_time=time.time()-starttime  #Calculates time since start of script
+    reset_current(sample_currentsource) #Resets current source
     set_current(sample_currentsource,current,MAXvoltage)    #Sets the positive sample current
+    print('Set current')
     time.sleep(5)
+    dummy_value1=meas_current(sample_ammeter)
+    time.sleep(1)
+    dummy_value2=meas_voltage(sample_voltmeter)
     currentplus=meas_current(sample_ammeter)    #Measures the positive sample current
     print('Pos current: ',currentplus, type(currentplus))
     time.sleep(1)
@@ -237,6 +255,8 @@ while current_time<end_time:
     print('Pos voltage: ',voltageplus, type(voltageplus))
     time.sleep(meas_pause) #Pauses loop for meas_pause seconds
     reset_current(sample_currentsource) #Resets current source
+    #current=current*-1
+    time.sleep(1)
     set_current(sample_currentsource,-current,MAXvoltage)   #Set the negative sample current
     time.sleep(1)
     currentminus=meas_current(sample_ammeter)   #Measures the negative sample current
@@ -244,16 +264,19 @@ while current_time<end_time:
     time.sleep(1)
     voltageminus=meas_voltage(sample_voltmeter) #Measures the negative sample voltage
     print('Neg voltage: ',voltageminus, type(voltageminus))
-    field=meas_field(hall_sensor)   #Measures the magnetic field
-    print('The field is: ',field, type(field))
     resistance=(voltageplus-voltageminus)/(currentplus-currentminus)    #Calculates the sample resistance
     print('The resistance is: ',resistance, type(resistance))
+    #field=meas_field(hall_sensor)   #Measures the magnetic field
+    field=0
+    #print('The field is: ',field, type(field))
     thermovoltage=meas_thermo_volt(thermo_voltmeter)    #Measures the thermometer voltage
-    temperature=calc_temp(thermovoltage)    #Calculates the temperature
+    temperature=calc_temp(thermovoltage/10**-5)    #Calculates the temperature
+    print('The thermometer voltage is: ',thermovoltage, type(thermovoltage))
     print('The temperature is: ',temperature, type(temperature))
-    f.write( "%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (n,current_time,temperature,thermovoltage,currentplus,currentminus,voltageplus,voltageminus,field,resistance))    #Writes data to file
+    f.write( "%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (n,current_time,temperature,thermovoltage,current, currentplus,currentminus,voltageplus,voltageminus,field,resistance))    #Writes data to file
     f.flush()   #Flushes data out to file to make sure it writes
     n=n+1
+    #current=current*-1
     #set up auto updating plotting
     try:
         fig1=plt.figure(1)
@@ -271,6 +294,7 @@ while current_time<end_time:
         plt.pause(0.05)
     except:
 	    print('Error plotting')
+    time.sleep(meas_pause) #Pauses loop for meas_pause seconds
 
 close_machines()
 close_file()
