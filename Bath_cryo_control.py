@@ -62,7 +62,7 @@ sample_voltmeter_address='192.168.1.66'  #ip address of multimeter TEK COLD
 sample_ammeter_address='192.168.1.86'    #ip address of multimeter TEK HOT
 thermo_voltmeter_address='192.168.1.67'  #ip address of multimeter FLUKE
 sample_currentsource_address='/dev/tty.usbserial'  #serial location of current source on a mac
-hall_sensor_address='/dev/tty.wchusbserial620' #Arduino to read voltage from hall probe on a mac
+hall_sensor_address='/dev/tty.wchusbserial410' #Arduino to read voltage from hall probe on a mac
 
 # DO NOT CHANGE BELOW THIS LINE
 ######################################################
@@ -87,7 +87,7 @@ sample_voltmeter=telnetlib.Telnet()   #Setup telnet
 thermo_voltmeter=telnetlib.Telnet()   #Setup telnet
 sample_ammeter=telnetlib.Telnet()   #Setup telnet
 
-#hall_sensor=serial.Serial(port=hall_sensor_address, baudrate=115200, timeout=3)  #Sets up connection to arduino for measuring the magn field
+hall_sensor=serial.Serial(port=hall_sensor_address, baudrate=115200, timeout=3)  #Sets up connection to arduino for measuring the magn field
 
 sample_currentsource=serial.Serial(sample_currentsource_address, 19200, bytesize=8, parity='N', stopbits=1, timeout=3)   #Setup serial
 sample_currentsource.write(('SYST:REM'+'\n').encode('ascii'))  #
@@ -219,21 +219,8 @@ def close_machines():    #For closing all relevant devices after finished sampli
 def close_file():    #For closing all relevant devices after finished sampling
     f.close()
 
-    #sample_voltmeter.close()
-    #thermo_voltmeter.close()
-    #sample_ammeter.close()
-    #sample_currentsource.close()
 ###############################################################################
 """Starting the measurement section"""
-"""
-#Dummy setup due to inilazation time of multimeters
-reset_current(sample_currentsource) #Resets current source
-set_current(sample_currentsource,current,MAXvoltage)    #Sets the positive sample current
-time.sleep(1)
-dummy_value1=meas_current(sample_ammeter)
-time.sleep(1)
-dummy_value2=meas_voltage(sample_voltmeter)
-"""
 starttime=time.time()   #Saves the start time
 
 n=0
@@ -244,10 +231,7 @@ while current_time<end_time:
     reset_current(sample_currentsource) #Resets current source
     set_current(sample_currentsource,current,MAXvoltage)    #Sets the positive sample current
     print('Set current')
-    time.sleep(5)
-    dummy_value1=meas_current(sample_ammeter)
     time.sleep(1)
-    dummy_value2=meas_voltage(sample_voltmeter)
     currentplus=meas_current(sample_ammeter)    #Measures the positive sample current
     print('Pos current: ',currentplus, type(currentplus))
     time.sleep(1)
@@ -255,7 +239,6 @@ while current_time<end_time:
     print('Pos voltage: ',voltageplus, type(voltageplus))
     time.sleep(meas_pause) #Pauses loop for meas_pause seconds
     reset_current(sample_currentsource) #Resets current source
-    #current=current*-1
     time.sleep(1)
     set_current(sample_currentsource,-current,MAXvoltage)   #Set the negative sample current
     time.sleep(1)
@@ -276,7 +259,6 @@ while current_time<end_time:
     f.write( "%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (n,current_time,temperature,thermovoltage,current, currentplus,currentminus,voltageplus,voltageminus,field,resistance))    #Writes data to file
     f.flush()   #Flushes data out to file to make sure it writes
     n=n+1
-    #current=current*-1
     #set up auto updating plotting
     try:
         fig1=plt.figure(1)
