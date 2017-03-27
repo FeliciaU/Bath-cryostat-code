@@ -19,9 +19,10 @@ The thermometer voltmeter is a FLUKE 8845A multimeter.
 Can connect via RS232 or ethernet.
 
 The magnetic field sensor is a Group3 DTM-133 which outputs an analog voltage on the
-two back pins which is proportional to the applied field.
+two back pins which is proportional to the applied field. Make sure the sensor
+is set to HOLD, the correct scale and that the comma sign is blinking.
 This is read by an Ardunio UNO (knock-off) which has a simple analog read and
-send serial data setup.
+send serial data setup, using a switch to send serial data when asked by python. 
 
 Current source setup:
 Keithley 6220 via RS232.
@@ -62,7 +63,8 @@ sample_voltmeter_address='192.168.1.66'  #ip address of multimeter TEK COLD
 sample_ammeter_address='192.168.1.86'    #ip address of multimeter TEK HOT
 thermo_voltmeter_address='192.168.1.67'  #ip address of multimeter FLUKE
 sample_currentsource_address='/dev/tty.usbserial'  #serial location of current source on a mac
-hall_sensor_address='/dev/tty.wchusbserial410' #Arduino to read voltage from hall probe on a mac
+#hall_sensor_address='/dev/tty.wchusbserial410' #Arduino Uno to read voltage from hall probe on a mac
+hall_sensor_address='/dev/tty.usbserial-A900abu3' #Arduino Duemilanove to read voltage from hall probe on a mac
 
 # DO NOT CHANGE BELOW THIS LINE
 ######################################################
@@ -87,7 +89,7 @@ sample_voltmeter=telnetlib.Telnet()   #Setup telnet
 thermo_voltmeter=telnetlib.Telnet()   #Setup telnet
 sample_ammeter=telnetlib.Telnet()   #Setup telnet
 
-hall_sensor=serial.Serial(port=hall_sensor_address, baudrate=115200, timeout=3)  #Sets up connection to arduino for measuring the magn field
+hall_sensor=serial.Serial(port=hall_sensor_address, baudrate=9600, timeout=3)  #Sets up connection to arduino for measuring the magn field
 
 sample_currentsource=serial.Serial(sample_currentsource_address, 19200, bytesize=8, parity='N', stopbits=1, timeout=3)   #Setup serial
 sample_currentsource.write(('SYST:REM'+'\n').encode('ascii'))  #
@@ -211,10 +213,11 @@ def calc_temp(Z):   # Getting temperature from resistasnce of a CERNOX sensor
     return T
 
 def close_machines():    #For closing all relevant devices after finished sampling
+    sample_currentsource.write(('OUTP OFF'+'\n').encode('ascii'))
     machinelist=[sample_voltmeter,thermo_voltmeter,sample_ammeter,sample_currentsource]
     for machine in machinelist:
         machine.close()
-    sample_currentsource.write(('OUTP OFF'+'\n').encode('ascii'))
+
 
 def close_file():    #For closing all relevant devices after finished sampling
     f.close()
@@ -249,9 +252,9 @@ while current_time<end_time:
     print('Neg voltage: ',voltageminus, type(voltageminus))
     resistance=(voltageplus-voltageminus)/(currentplus-currentminus)    #Calculates the sample resistance
     print('The resistance is: ',resistance, type(resistance))
-    #field=meas_field(hall_sensor)   #Measures the magnetic field
-    field=0
-    #print('The field is: ',field, type(field))
+    field=meas_field(hall_sensor)   #Measures the magnetic field
+    #field=0
+    print('The field is: ',field, type(field))
     thermovoltage=meas_thermo_volt(thermo_voltmeter)    #Measures the thermometer voltage
     temperature=calc_temp(thermovoltage/10**-5)    #Calculates the temperature
     print('The thermometer voltage is: ',thermovoltage, type(thermovoltage))
