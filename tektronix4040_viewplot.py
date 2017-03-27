@@ -3,6 +3,7 @@ import time, datetime, re
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
+import sys
 ###Notes from Felica###
 #b'+9.90000000E+37\r\n'
 #+9.90000000E+37
@@ -85,4 +86,4 @@ print('end   :  {:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now()))
 #closes the multimeter
 multimeter.close()
 data=np.array([voltage[1:],t[1:]]).T
-np.savetxt("test.csv", data,header="R,t",delimiter=',')
+np.savetxt(sys.argv[1], data,header="R,t",delimiter=',')
